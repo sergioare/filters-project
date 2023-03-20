@@ -1,14 +1,51 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 export interface HomeProps {}
 import { DataGrid, GridRenderCellParams } from '@mui/x-data-grid';
 import { People } from '@/data/people';
+import { Person } from '@/models';
+import { Checkbox } from '@mui/material';
+import { useDispatch } from 'react-redux';
+import { addFavorite, addPeople } from '@/redux/states';
+import store from '@/redux/store';
 
 const Home : React.FC<HomeProps> = () => {
 	const [paginationModel, setPaginationModel] = React.useState({
 		pageSize: 5,
 		page: 0,
-	  });	
-	const columns =[{
+	  });
+	
+	const dispatch = useDispatch()
+
+	const [selectedPeople, setSelectedPeople] = useState<Person[]>([]);
+
+	const findPerson = (person: Person)=> !!selectedPeople.find(p=> p.id === person.id)
+	//   !! use to convert the result in a boolean
+	const filterPerson = (person: Person)=> selectedPeople.filter(p=> p.id !== person.id)
+
+
+	const handleChange= (person: Person)=> {
+		const filteredPeople = findPerson(person)? filterPerson(person):[...selectedPeople, person];
+		dispatch(addFavorite(filteredPeople))
+		setSelectedPeople(filteredPeople)
+	}
+
+	const columns =[
+	{
+		field: 'actions',
+		type:'actions',
+		sortable: false,
+		headerName: '',
+		flex: 1,
+		minWidth: 50,
+		renderCell: (params: GridRenderCellParams) => <>{
+			<Checkbox 
+				size='small'
+				checked={findPerson(params.row)} 
+				onChange={()=>handleChange(params.row)}
+			/>
+		}</>
+	},
+	{
 		field: 'name',
 		headerName: 'Name',
 		flex: 1,
@@ -28,9 +65,13 @@ const Home : React.FC<HomeProps> = () => {
 		renderCell: (params: GridRenderCellParams) => <>{params.value}</>
 	}
 ]
+
+	useEffect(()=>{
+		dispatch(addPeople(People))
+	},[])
 	return (
 		<DataGrid
-			rows={People}
+			rows={store.getState().people}
 			columns={columns}
 			disableColumnSelector
 			disableRowSelectionOnClick
@@ -38,6 +79,7 @@ const Home : React.FC<HomeProps> = () => {
 			paginationModel={paginationModel}
         	onPaginationModelChange={setPaginationModel}
 			getRowId={(row:any)=> row.id}
+			pageSizeOptions={[5,10,15]}
 			
 		/>
 	)
